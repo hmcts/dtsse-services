@@ -1,177 +1,21 @@
-# Spring Boot application template
+# dtsse-services
 
-## Purpose
+A small Spring Boot service for DTS Software Engineering. It has PostgreSQL connectivity, health endpoints, and a ListAssist Blob reader, with no application API, ingestion schedule, or schema yet.
 
-The purpose of this template is to speed up the creation of new Spring applications within HMCTS
-and help keep the same standards across multiple teams. If you need to create a new app, you can
-simply use this one as a starting point and build on top of it.
+## Local development
 
-## What's inside
+Use Java 25 and Docker Compose. Start PostgreSQL with `docker compose up -d postgres`, then run `./gradlew bootRun`. The local database, user, and password are all `services`. Check `http://localhost:4550/health/readiness`; it reports `UP` only when PostgreSQL is reachable. Run `./gradlew check` for the build checks. Stop the database with `docker compose down` (add `-v` to discard local data).
 
-The template is a working application with a minimal setup. It contains:
- * application skeleton
- * setup script to prepare project
- * common plugins and libraries
- * [HMCTS Java plugin](https://github.com/hmcts/gradle-java-plugin)
- * docker setup
- * automatically publishes API documentation to [hmcts/cnp-api-docs](https://github.com/hmcts/cnp-api-docs)
- * code quality tools already set up
- * MIT license and contribution information
- * Helm chart using chart-java.
+## CNP deployment
 
-The application exposes health endpoint (http://localhost:4550/health) and metrics endpoint
-(http://localhost:4550/metrics).
+The Jenkins pipeline uses product `dtsse` and component `services`; the chart is under `charts/dtsse-services`. Preview and AAT use a non-persistent PostgreSQL 18 container in the release. The application is only ready after that database accepts connections. These databases are disposable; do not put data in them that must survive a restart or redeploy.
 
-## Plugins
+The `hmcts/dtsse-services` repository is public, the `rse` GitHub team has write access, and the `jenkins-cft-d-i` topic is set. The [Jenkins deployment controls PR](https://github.com/hmcts/cnp-jenkins-config/pull/1355) must merge and a Flux HelmRelease is still needed before Jenkins can deploy it. Follow the [CNP new component flow](https://hmcts.github.io/cloud-native-platform/new-component/) and validate preview or AAT first.
 
-The template contains the following plugins:
+Production uses PostgreSQL Flexible Server 18, General Purpose `GP_Standard_D2s_v3`, with 32 GiB storage, no high availability replica, and seven days of backup retention. Terraform creates this database only for `prod`. The chart expects its password in the existing `dtsse` Key Vault under `services-POSTGRES-PASS`. Provision and link that secret through the approved production process before deployment. The server's private network and JIT access requirements also need to be met. No production resources are created by this repository alone.
 
-  * HMCTS Java plugin
+## ListAssist access
 
-    Applies code analysis tools with HMCTS default settings. See the [project repository](https://github.com/hmcts/gradle-java-plugin) for details.
+`ListAssistBlobReader` uses the Azure Blob SDK and `DefaultAzureCredential` against `https://mipersistentprod.blob.core.windows.net/`. It exposes internal list and download methods for `v3-sl-hearings`, `v3-sl-sessions`, `v3-sl-sessions-jofficer`, and `v3-sl-user`. Nothing invokes the reader yet.
 
-    Analysis tools include:
-
-    * checkstyle
-
-        https://docs.gradle.org/current/userguide/checkstyle_plugin.html
-
-        Performs code style checks on Java source files using Checkstyle and generates reports from these checks.
-        The checks are included in gradle's *check* task (you can run them by executing `./gradlew check` command).
-
-    * org.owasp.dependencycheck
-
-        https://jeremylong.github.io/DependencyCheck/dependency-check-gradle/index.html
-
-        Provides monitoring of the project's dependent libraries and creating a report
-        of known vulnerable components that are included in the build. To run it
-        execute `gradle dependencyCheck` command.
-
-  * jacoco
-
-    https://docs.gradle.org/current/userguide/jacoco_plugin.html
-
-    Provides code coverage metrics for Java code via integration with JaCoCo.
-    You can create the report by running the following command:
-
-    ```bash
-      ./gradlew jacocoTestReport
-    ```
-
-    The report will be created in build/reports subdirectory in your project directory.
-
-  * io.spring.dependency-management
-
-    https://github.com/spring-gradle-plugins/dependency-management-plugin
-
-    Provides Maven-like dependency management. Allows you to declare dependency management
-    using `dependency 'groupId:artifactId:version'`
-    or `dependency group:'group', name:'name', version:version'`.
-
-  * org.springframework.boot
-
-    http://projects.spring.io/spring-boot/
-
-    Reduces the amount of work needed to create a Spring application
-
-
-  * com.github.ben-manes.versions
-
-    https://github.com/ben-manes/gradle-versions-plugin
-
-    Provides a task to determine which dependencies have updates. Usage:
-
-    ```bash
-      ./gradlew dependencyUpdates -Drevision=release
-    ```
-
-## Setup
-
-Located in `./bin/init.sh`. Simply run and follow the explanation how to execute it.
-
-## Building and deploying the application
-
-### Building the application
-
-The project uses [Gradle](https://gradle.org) as a build tool. It already contains
-`./gradlew` wrapper script, so there's no need to install gradle.
-
-To build the project execute the following command:
-
-```bash
-  ./gradlew build
-```
-
-### Running the application
-
-Create the image of the application by executing the following command:
-
-```bash
-  ./gradlew assemble
-```
-
-Note: Docker Compose V2 is highly recommended for building and running the application.
-In the Compose V2 old `docker-compose` command is replaced with `docker compose`.
-
-Create docker image:
-
-```bash
-  docker compose build
-```
-
-Run the distribution (created in `build/install/spring-boot-template` directory)
-by executing the following command:
-
-```bash
-  docker compose up
-```
-
-This will start the API container exposing the application's port
-(set to `4550` in this template app).
-
-In order to test if the application is up, you can call its health endpoint:
-
-```bash
-  curl http://localhost:4550/health
-```
-
-You should get a response similar to this:
-
-```
-  {"status":"UP","diskSpace":{"status":"UP","total":249644974080,"free":137188298752,"threshold":10485760}}
-```
-
-### Alternative script to run application
-
-To skip all the setting up and building, just execute the following command:
-
-```bash
-./bin/run-in-docker.sh
-```
-
-For more information:
-
-```bash
-./bin/run-in-docker.sh -h
-```
-
-Script includes bare minimum environment variables necessary to start api instance. Whenever any variable is changed or any other script regarding docker image/container build, the suggested way to ensure all is cleaned up properly is by this command:
-
-```bash
-docker compose rm
-```
-
-It clears stopped containers correctly. Might consider removing clutter of images too, especially the ones fiddled with:
-
-```bash
-docker images
-
-docker image rm <image-id>
-```
-
-There is no need to remove postgres and java or similar core images.
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details
-
+The chart dependency comes from the HMCTS private ACR. CI needs registry access to run `helm dependency build charts/dtsse-services`.

@@ -1,0 +1,23 @@
+java:
+  applicationPort: 4550
+  image: hmctsprod.azurecr.io/dtsse/services:latest
+  ingressHost: dtsse-services-{{ .Values.global.environment }}.service.core-compute-{{ .Values.global.environment }}.internal
+  aadIdentityName: dtsse
+  useWorkloadIdentity: true
+  saEnabled: false
+  customServiceAccountName: dtsse-services
+  environment:
+    DB_HOST: dtsse-services-prod.postgres.database.azure.com
+    DB_PORT: "5432"
+    DB_NAME: services
+    DB_USER_NAME: pgadmin
+    DB_OPTIONS: "?sslmode=require"
+    LISTASSIST_BLOB_ENDPOINT: https://mipersistentprod.blob.core.windows.net/
+  keyVaults:
+    dtsse:
+      secrets:
+        - name: services-POSTGRES-PASS
+          alias: DB_PASSWORD
+
+devPostgresql:
+  enabled: false
