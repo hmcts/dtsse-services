@@ -48,8 +48,9 @@ class PrivateDownloadsTest {
         try (var out = PrivateDownloads.bounded(destination, 4)) {
             out.write(new byte[] {1, 2, 3});
             out.write(4);
-            assertThatThrownBy(() -> out.write(5)).isInstanceOf(SourceFileException.class);
-            assertThatThrownBy(() -> out.write(new byte[] {5, 6})).isInstanceOf(SourceFileException.class);
+            assertThatThrownBy(() -> out.write(5)).isInstanceOf(PrivateDownloads.DownloadTooLargeException.class);
+            assertThatThrownBy(() -> out.write(new byte[] {5, 6}))
+                .isInstanceOf(PrivateDownloads.DownloadTooLargeException.class);
         }
         assertThat(destination.toByteArray()).containsExactly(1, 2, 3, 4);
     }

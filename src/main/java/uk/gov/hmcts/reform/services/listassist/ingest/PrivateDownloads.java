@@ -62,11 +62,21 @@ class PrivateDownloads {
                 written += length;
             }
 
-            private void check(int length) {
+            private void check(int length) throws DownloadTooLargeException {
                 if (length > limit - written) {
-                    throw new SourceFileException("file_too_large", "Download exceeds the file size limit");
+                    // Azure's output-stream subscriber handles IOException, but can drop runtime exceptions.
+                    throw new DownloadTooLargeException();
                 }
             }
         };
+    }
+
+    static final class DownloadTooLargeException extends IOException {
+
+        private static final long serialVersionUID = 1L;
+
+        DownloadTooLargeException() {
+            super("Download exceeds the file size limit");
+        }
     }
 }
