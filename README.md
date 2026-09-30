@@ -8,7 +8,7 @@ Use Java 25 and Docker Compose. Start PostgreSQL with `docker compose up -d post
 
 ## CNP deployment
 
-The Jenkins pipeline uses product `dtsse` and component `services`; the chart is under `charts/dtsse-services`. Preview and AAT use a non-persistent PostgreSQL 18 container in the release. The application is only ready after that database accepts connections. These databases are disposable; do not put data in them that must survive a restart or redeploy.
+The Jenkins pipeline uses product `dtsse` and component `services`; the chart is under `charts/dtsse-services`. Preview and the pipeline's AAT staging deploy use a non-persistent PostgreSQL 18 container in the release. The application is only ready after that database accepts connections. These databases are disposable; do not put data in them that must survive a restart or redeploy. AAT and production deployments use a PostgreSQL Flexible Server created by Terraform, described in `infrastructure/README.md`.
 
 The smoke and functional tests call the deployed service at `TEST_URL`, which the pipeline sets after each AKS deployment; locally they default to `http://localhost:4550`.
 
