@@ -1,5 +1,5 @@
 {
-  "connectionString": "${file:/mnt/secrets/dtsse/AppInsightsConnectionString}",
+  "connectionString": "${file:/mnt/secrets/dtsse-services/app-insights-connection-string}",
   "role": {
     "name": "dtsse-services"
   },

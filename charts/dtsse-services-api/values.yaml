@@ -4,20 +4,20 @@ java:
   memoryLimits: 3Gi
   devmemoryRequests: 2Gi
   devmemoryLimits: 3Gi
-  image: hmctsprod.azurecr.io/dtsse/services:latest
-  ingressHost: dtsse-services-{{ .Values.global.environment }}.service.core-compute-{{ .Values.global.environment }}.internal
+  image: hmctsprod.azurecr.io/dtsse-services/api:latest
+  ingressHost: dtsse-services-api-{{ .Values.global.environment }}.service.core-compute-{{ .Values.global.environment }}.internal
   environment:
-    DB_HOST: dtsse-services-{{ .Values.global.environment }}.postgres.database.azure.com
+    DB_HOST: dtsse-services-api-{{ .Values.global.environment }}.postgres.database.azure.com
     DB_PORT: "5432"
     DB_NAME: services
     DB_USER_NAME: pgadmin
     DB_OPTIONS: "?sslmode=require"
   keyVaults:
-    dtsse:
+    dtsse-services:
       secrets:
-        - name: services-POSTGRES-PASS
+        - name: api-POSTGRES-PASS
           alias: DB_PASSWORD
-        - AppInsightsConnectionString
+        - app-insights-connection-string
         - name: listassist-blob-endpoint
           alias: listassist.blob.endpoint
         - name: listassist-container-hearings

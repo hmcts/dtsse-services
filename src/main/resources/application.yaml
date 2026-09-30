@@ -19,7 +19,7 @@ management:
 
 spring:
   config:
-    import: "optional:configtree:/mnt/secrets/dtsse/"
+    import: "optional:configtree:/mnt/secrets/dtsse-services/"
   application:
     name: dtsse-services
   datasource:
@@ -46,7 +46,3 @@ listassist:
     # Larger extracts fail as file_too_large before download, bounding temporary disk use.
     max-file-bytes: ${LISTASSIST_INGEST_MAX_FILE_BYTES:1073741824}
     temp-directory: ${LISTASSIST_INGEST_TEMP_DIRECTORY:${java.io.tmpdir}/dtsse-listassist}
-
-azure:
-  application-insights:
-    instrumentation-key: ${dtsse.AppInsightsInstrumentationKey:00000000-0000-0000-0000-000000000000}

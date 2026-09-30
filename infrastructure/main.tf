@@ -1,6 +1,7 @@
 locals {
-  # AAT has its own database so a deployment there uses the same wiring as production.
-  create_database = contains(["aat", "prod"], var.env)
+  # AAT and production get the product's resource group, Key Vault, managed identity, Application Insights and
+  # database, so an AAT deployment uses the same wiring as production.
+  create_infrastructure = contains(["aat", "prod"], var.env)
 }
 
 provider "azurerm" {
@@ -15,7 +16,7 @@ provider "azurerm" {
 }
 
 module "postgresql" {
-  count = local.create_database ? 1 : 0
+  count = local.create_infrastructure ? 1 : 0
 
   source = "git@github.com:hmcts/terraform-module-postgresql-flexible?ref=master"
 
@@ -43,17 +44,10 @@ module "postgresql" {
   ]
 }
 
-data "azurerm_key_vault" "dtsse" {
-  count = local.create_database ? 1 : 0
-
-  name                = "${var.product}-${var.env}"
-  resource_group_name = "${var.product}-${var.env}"
-}
-
 resource "azurerm_key_vault_secret" "postgres_password" {
-  count = local.create_database ? 1 : 0
+  count = local.create_infrastructure ? 1 : 0
 
   name         = "${var.component}-POSTGRES-PASS"
   value        = module.postgresql[0].password
-  key_vault_id = data.azurerm_key_vault.dtsse[0].id
+  key_vault_id = module.key_vault[0].key_vault_id
 }

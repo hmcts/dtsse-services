@@ -1,11 +1,11 @@
 apiVersion: v2
 appVersion: "1.0"
-description: A Helm chart for dtsse-services App
-name: dtsse-services
+description: A Helm chart for the dtsse-services API
+name: dtsse-services-api
 home: https://github.com/hmcts/dtsse-services
-version: 0.0.2
+version: 0.0.3
 maintainers:
-  - name: HMCTS dtsse team
+  - name: HMCTS DTS Software Engineering
 dependencies:
   - name: java
     version: 6.1.1

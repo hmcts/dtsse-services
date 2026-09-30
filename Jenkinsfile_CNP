@@ -2,7 +2,7 @@
 @Library("Infrastructure")
 
 def type = "java"
-def product = "dtsse"
-def component = "services"
+def product = "dtsse-services"
+def component = "api"
 
 withPipeline(type, product, component) {}
