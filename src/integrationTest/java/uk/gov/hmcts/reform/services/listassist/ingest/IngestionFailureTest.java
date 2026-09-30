@@ -26,6 +26,7 @@ import uk.gov.hmcts.reform.services.listassist.query.ListAssistCandidateReposito
 import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.Statement;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -38,6 +39,7 @@ import javax.sql.DataSource;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.tuple;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 
 /**
  * Failure paths and query edge cases. Every test starts from an empty emulator and database.
@@ -88,6 +90,29 @@ class IngestionFailureTest {
             + " listassist.session_row, listassist.session_officer_row, listassist.user_row");
         jdbc.execute("drop trigger if exists injected on listassist.hearing_row");
         jdbc.execute("drop trigger if exists injected on listassist.user_row");
+    }
+
+    @Test
+    void oversizedDownloadReturnsThroughAzureSdkAndReleasesTheLock() throws Exception {
+        upload("users", USERS_FULL, BinaryData.fromBytes(new byte[200_001]));
+        BlobProperties actual = container("users").getBlobClient(USERS_FULL).getProperties();
+        // Understate the listing size to reach the stream limit through the real SDK and HTTP transport.
+        ListedVersion listed = new ListedVersion(ExtractName.parse(USERS_FULL, "vhmcts_user").orElseThrow(),
+            actual.getETag(), 1);
+        PostgresAdvisoryLock lock = new PostgresAdvisoryLock(dataSource);
+
+        assertTimeoutPreemptively(Duration.ofSeconds(10), () -> {
+            assertThat(lock.runIfAcquired(ListAssistIngestionJob.LOCK_NAME, held ->
+                assertThat(fileIngester.ingest(ListAssistDataset.USERS, listed, null)).isFalse())).isTrue();
+        });
+
+        assertThat(jdbc.queryForList("select status, error_code from listassist.source_file"))
+            .containsExactly(Map.of("status", "failed", "error_code", "file_too_large"));
+        try (var files = java.nio.file.Files.list(Path.of(System.getProperty("java.io.tmpdir"), "dtsse-listassist"))) {
+            assertThat(files).isEmpty();
+        }
+        assertThat(jdbc.queryForObject("select count(*) from pg_locks where locktype = 'advisory'", Integer.class))
+            .isZero();
     }
 
     @Test

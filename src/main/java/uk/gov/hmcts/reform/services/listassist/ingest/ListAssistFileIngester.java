@@ -94,7 +94,9 @@ class ListAssistFileIngester {
         } catch (SourceFileException e) {
             fail(container, version, e.errorCode(), e);
         } catch (IOException | UncheckedIOException e) {
-            fail(container, version, "download_failed", e);
+            Throwable cause = e instanceof UncheckedIOException wrapped ? wrapped.getCause() : e;
+            fail(container, version, cause instanceof PrivateDownloads.DownloadTooLargeException
+                ? "file_too_large" : "download_failed", e);
         } catch (DataAccessException | TransactionException e) {
             fail(container, version, "database_failed", e);
         } catch (NoSuchAlgorithmException | RuntimeException e) {
