@@ -91,6 +91,26 @@ class IngestionFailureTest {
     }
 
     @Test
+    void oversizedFieldRollsBackAlreadyFlushedRowsAndRemovesTheDownload() throws Exception {
+        List<Map<String, String>> rows = new ArrayList<>();
+        for (int i = 0; i < 501; i++) {
+            rows.add(user("91" + i, "0100001", MODIFIED));
+        }
+        rows.add(user("bad", "x".repeat(ParquetLimits.MAX_FIELD_BYTES + 1), MODIFIED));
+        upload("users", USERS_FULL, parquet(INVENTORY.observed("users").columns(), rows));
+
+        job.runOnce();
+
+        assertThat(jdbc.queryForObject("select count(*) from listassist.user_row", Integer.class)).isZero();
+        assertThat(jdbc.queryForObject("select error_code from listassist.source_file", String.class))
+            .isEqualTo("resource_limit");
+        assertThat(jdbc.queryForObject("select count(*) from listassist.container_bootstrap", Integer.class)).isZero();
+        try (var files = java.nio.file.Files.list(Path.of(System.getProperty("java.io.tmpdir"), "dtsse-listassist"))) {
+            assertThat(files).isEmpty();
+        }
+    }
+
+    @Test
     void badFilesFailWithoutBlockingOthersAndBadRowsAreKeptButNotCurrent() {
         List<String> columns = INVENTORY.observed("users").columns();
         upload("users", USERS_FULL, parquet(columns,

@@ -43,15 +43,21 @@ class ListAssistFileIngester {
     private final JdbcTemplate jdbc;
     private final TransactionTemplate transaction;
     private final long maxFileBytes;
+    private final PrivateDownloads downloads;
 
     ListAssistFileIngester(ListAssistBlobReader reader, SourceFileLedger ledger, JdbcTemplate jdbc,
                            TransactionTemplate transaction,
-                           @Value("${listassist.ingest.max-file-bytes}") long maxFileBytes) {
+                           @Value("${listassist.ingest.max-file-bytes}") long maxFileBytes,
+                           PrivateDownloads downloads) {
         this.reader = reader;
         this.ledger = ledger;
         this.jdbc = jdbc;
         this.transaction = transaction;
         this.maxFileBytes = maxFileBytes;
+        this.downloads = downloads;
+        if (maxFileBytes <= 0) {
+            throw new IllegalArgumentException("listassist.ingest.max-file-bytes must be positive");
+        }
     }
 
     /**
@@ -66,9 +72,10 @@ class ListAssistFileIngester {
         }
         Path file = null;
         try {
-            file = Files.createTempFile("listassist-", ".parquet");
+            file = downloads.create();
             MessageDigest sha256 = MessageDigest.getInstance("SHA-256");
-            try (OutputStream out = new DigestOutputStream(Files.newOutputStream(file), sha256)) {
+            try (OutputStream out = PrivateDownloads.bounded(
+                new DigestOutputStream(Files.newOutputStream(file), sha256), maxFileBytes)) {
                 reader.download(dataset.container(), version.name().blobName(), version.etag(), out);
             }
             Path downloaded = file;

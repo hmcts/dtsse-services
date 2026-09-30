@@ -45,6 +45,7 @@ listassist:
     zone: ${LISTASSIST_INGEST_ZONE:Europe/London}
     # Larger extracts fail as file_too_large before download, bounding temporary disk use.
     max-file-bytes: ${LISTASSIST_INGEST_MAX_FILE_BYTES:1073741824}
+    temp-directory: ${LISTASSIST_INGEST_TEMP_DIRECTORY:${java.io.tmpdir}/dtsse-listassist}
 
 azure:
   application-insights:

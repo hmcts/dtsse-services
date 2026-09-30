@@ -1,7 +1,7 @@
 package uk.gov.hmcts.reform.services.listassist.ingest;
 
 /**
- * A source file that cannot be read as a whole: {@code schema_mismatch} or {@code decode_failed}. Its message never
+ * A source file that cannot be read safely as a whole. Its message never
  * contains row values.
  */
 class SourceFileException extends RuntimeException {

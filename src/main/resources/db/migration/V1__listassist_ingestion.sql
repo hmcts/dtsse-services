@@ -119,6 +119,8 @@ create table listassist.user_row (
 
 create index hearing_row_identity on listassist.hearing_row (id_hearing, id_case, id_session, last_modified desc);
 create index hearing_row_session on listassist.hearing_row (id_session);
+create index hearing_row_day on listassist.hearing_row (hearing_date, id_hearing);
+create index hearing_row_problem on listassist.hearing_row (row_problem) where row_problem is not null;
 create index hearing_row_jo_1 on listassist.hearing_row (id_jo_1) where id_jo_1 is not null;
 create index hearing_row_jo_2 on listassist.hearing_row (id_jo_2) where id_jo_2 is not null;
 create index hearing_row_jo_3 on listassist.hearing_row (id_jo_3) where id_jo_3 is not null;
