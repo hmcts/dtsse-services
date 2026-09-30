@@ -7,3 +7,5 @@ The module uses `hmcts/terraform-module-postgresql-flexible` at `master`, the re
 The module's generated admin password is written to the environment's existing `dtsse` Key Vault (`dtsse-aat` or `dtsse-prod`) as `services-POSTGRES-PASS`, where the chart reads it. The chart's database host assumes the module's standard `dtsse-services-<env>` server name.
 
 The module enables reader group access by default: `DTS CFT DB Access Reader` in AAT, and `DTS JIT Access dtsse DB Reader SC`, which must exist before the production Terraform run, following the [CNP database guidance](https://hmcts.github.io/cloud-native-platform/infrastructure/database/). Writer JIT access is not enabled here.
+
+In `aat` and `prod`, Terraform also creates the service's own managed identity, `dtsse-services-<env>-mi`, in `managed-identities-<env>-rg`. Its client and principal IDs are the `workload_identity_client_id` and `workload_identity_principal_id` outputs. The configuration that lets the service use it is added separately.
