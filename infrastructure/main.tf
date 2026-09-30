@@ -1,3 +1,8 @@
+locals {
+  # AAT has its own database so a deployment there uses the same wiring as production.
+  create_database = contains(["aat", "prod"], var.env)
+}
+
 provider "azurerm" {
   features {}
 }
@@ -10,7 +15,7 @@ provider "azurerm" {
 }
 
 module "postgresql" {
-  count = var.env == "prod" ? 1 : 0
+  count = local.create_database ? 1 : 0
 
   source = "git@github.com:hmcts/terraform-module-postgresql-flexible?ref=master"
 
@@ -27,7 +32,7 @@ module "postgresql" {
   admin_user_object_id = var.jenkins_AAD_objectId
 
   pgsql_version         = "18"
-  pgsql_sku             = "GP_Standard_D2s_v3"
+  pgsql_sku             = var.pgsql_sku
   pgsql_storage_mb      = 32768
   high_availability     = false
   backup_retention_days = 7
@@ -39,14 +44,14 @@ module "postgresql" {
 }
 
 data "azurerm_key_vault" "dtsse" {
-  count = var.env == "prod" ? 1 : 0
+  count = local.create_database ? 1 : 0
 
   name                = "${var.product}-${var.env}"
   resource_group_name = "${var.product}-${var.env}"
 }
 
 resource "azurerm_key_vault_secret" "postgres_password" {
-  count = var.env == "prod" ? 1 : 0
+  count = local.create_database ? 1 : 0
 
   name         = "${var.component}-POSTGRES-PASS"
   value        = module.postgresql[0].password
