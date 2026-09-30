@@ -2,51 +2,50 @@ server:
   port: 4550
   shutdown: "graceful"
 
-# If you use a database then uncomment the `group:, readiness: and include: "db"` lines in the health probes and uncomment the datasource section
 management:
   endpoint:
     health:
       show-details: "always"
-      # group:
-      #  readiness:
-      #   include: "db"
+      probes:
+        enabled: true
+      group:
+        readiness:
+          include: "readinessState,db"
   endpoints:
     web:
       base-path: /
       exposure:
         include: health, info, prometheus
 
-springdoc:
-  packagesToScan: uk.gov.hmcts.reform.demo.controllers
-  writer-with-order-by-keys: true
-
 spring:
   config:
-    import: "optional:configtree:/mnt/secrets/rpe/"
+    import: "optional:configtree:/mnt/secrets/dtsse/"
   application:
-    name: Spring Boot Template
-#  datasource:
-#    driver-class-name: org.postgresql.Driver
-#    url: jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}${DB_OPTIONS:}
-#    username: ${DB_USER_NAME}
-#    password: ${DB_PASSWORD}
-#    properties:
-#      charSet: UTF-8
-#    hikari:
-#      minimumIdle: 2
-#      maximumPoolSize: 10
-#      idleTimeout: 10000
-#      poolName: {to-be-defined}HikariCP
-#      maxLifetime: 7200000
-#      connectionTimeout: 30000
-#  jpa:
-#    properties:
-#      hibernate:
-#        jdbc:
-#          lob:
-#            # silence the 'wall-of-text' - unnecessary exception throw about blob types
-#            non_contextual_creation: true
+    name: dtsse-services
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:55432}/${DB_NAME:services}${DB_OPTIONS:}
+    username: ${DB_USER_NAME:services}
+    password: ${DB_PASSWORD:services}
+    hikari:
+      maximum-pool-size: 5
+      minimum-idle: 1
+  flyway:
+    # Preview and AAT start the application alongside a fresh PostgreSQL pod
+    connect-retries: 30
+
+listassist:
+  blob:
+    # listassist.blob.endpoint and listassist.blob.containers.{hearings,sessions,session-officers,users} have no
+    # defaults; deployments mount them from Key Vault. Without an endpoint there is no Blob access or ingestion.
+    # entra (DefaultAzureCredential) or emulator (Azurite development key, emulator endpoints only)
+    auth: ${LISTASSIST_BLOB_AUTH:entra}
+  ingest:
+    enabled: ${LISTASSIST_INGEST_ENABLED:false}
+    cron: ${LISTASSIST_INGEST_CRON:0 */15 * * * *}
+    zone: ${LISTASSIST_INGEST_ZONE:Europe/London}
+    # Larger extracts fail as file_too_large before download, bounding temporary disk use.
+    max-file-bytes: ${LISTASSIST_INGEST_MAX_FILE_BYTES:1073741824}
 
 azure:
   application-insights:
-    instrumentation-key: ${rpe.AppInsightsInstrumentationKey:00000000-0000-0000-0000-000000000000}
+    instrumentation-key: ${dtsse.AppInsightsInstrumentationKey:00000000-0000-0000-0000-000000000000}

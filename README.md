@@ -1,177 +1,35 @@
-# Spring Boot application template
+# dtsse-services
 
-## Purpose
+A small Spring Boot service for DTS Software Engineering. It has PostgreSQL connectivity, health endpoints, and a ListAssist Blob reader, with no application API, ingestion schedule, or schema yet.
 
-The purpose of this template is to speed up the creation of new Spring applications within HMCTS
-and help keep the same standards across multiple teams. If you need to create a new app, you can
-simply use this one as a starting point and build on top of it.
+## Local development
 
-## What's inside
+Use Java 25 and Docker Compose. Start PostgreSQL with `docker compose up -d postgres`, then run `./gradlew bootRun`. The local database, user, and password are all `services`. Check `http://localhost:4550/health/readiness`; it reports `UP` only when PostgreSQL is reachable. Run `./gradlew check` for the build checks. Stop the database with `docker compose down` (add `-v` to discard local data).
 
-The template is a working application with a minimal setup. It contains:
- * application skeleton
- * setup script to prepare project
- * common plugins and libraries
- * [HMCTS Java plugin](https://github.com/hmcts/gradle-java-plugin)
- * docker setup
- * automatically publishes API documentation to [hmcts/cnp-api-docs](https://github.com/hmcts/cnp-api-docs)
- * code quality tools already set up
- * MIT license and contribution information
- * Helm chart using chart-java.
+## CNP deployment
 
-The application exposes health endpoint (http://localhost:4550/health) and metrics endpoint
-(http://localhost:4550/metrics).
+The Jenkins pipeline uses product `dtsse` and component `services`; the chart is under `charts/dtsse-services`. Preview and AAT use a non-persistent PostgreSQL 18 container in the release. The application is only ready after that database accepts connections. These databases are disposable; do not put data in them that must survive a restart or redeploy.
 
-## Plugins
+The smoke and functional tests call the deployed service at `TEST_URL`, which the pipeline sets after each AKS deployment; locally they default to `http://localhost:4550`.
 
-The template contains the following plugins:
+The `hmcts/dtsse-services` repository is public, the `rse` GitHub team has write access, and the `jenkins-cft-d-i` topic is set. The [Jenkins deployment controls PR](https://github.com/hmcts/cnp-jenkins-config/pull/1355) must merge before Jenkins deploys anything, the repository must be added under `prod` in `environment-approvals.yml` or production Terraform is skipped, and a Flux HelmRelease is needed to run it in production. Follow the [CNP new component flow](https://hmcts.github.io/cloud-native-platform/new-component/) and validate preview or AAT first.
 
-  * HMCTS Java plugin
+Production uses PostgreSQL Flexible Server 18, General Purpose `GP_Standard_D2s_v3`, with 32 GiB storage, no high availability replica, and seven days of backup retention, on the expanded PostgreSQL subnet. Terraform creates this database only for `prod` and writes its password to the existing `dtsse-prod` Key Vault as `services-POSTGRES-PASS`, which the chart mounts with `AppInsightsConnectionString` through the `dtsse` workload identity.
 
-    Applies code analysis tools with HMCTS default settings. See the [project repository](https://github.com/hmcts/gradle-java-plugin) for details.
+## ListAssist access
 
-    Analysis tools include:
+`ListAssistBlobReader` uses the Azure Blob SDK against `listassist.blob.endpoint` for the four core containers, whose physical names are set as `listassist.blob.containers.hearings`, `.sessions`, `.session-officers` and `.users`. None of these have defaults: deployments mount them from the `dtsse` Key Vault (`listassist-blob-endpoint` and `listassist-container-<key>`), and without an endpoint the application runs with no Blob access or ingestion. `LISTASSIST_BLOB_AUTH` is `entra` (default, `DefaultAzureCredential`) or `emulator`, which uses the public Azurite development key and refuses any endpoint that is not a plain HTTP `/devstoreaccount1` URL. There is no fallback between the two.
 
-    * checkstyle
+### Ingestion
 
-        https://docs.gradle.org/current/userguide/checkstyle_plugin.html
+A scheduled job (`LISTASSIST_INGEST_CRON`, default every 15 minutes, zone `LISTASSIST_INGEST_ZONE`, default Europe/London) runs only when `LISTASSIST_INGEST_ENABLED=true`, which defaults to false. Each run holds a PostgreSQL session advisory lock on its own connection, so only one replica ingests at a time. Each container is bootstrapped once from its latest Full extract; after that every unseen Blob version is ingested, including late arrivals. A download uses `If-Match` on the listed ETag, and each file's ledger row and selected rows commit in one transaction. Failed files are recorded in `listassist.source_file` and retried on later runs.
 
-        Performs code style checks on Java source files using Checkstyle and generates reports from these checks.
-        The checks are included in gradle's *check* task (you can run them by executing `./gradlew check` command).
+Flyway creates the `listassist` schema: the `source_file` ledger, `container_bootstrap`, and one table of selected source rows per container. Names, contact details and notes are never read. Views derive current state (`current_hearing_association`, `current_session`, `current_session_officer`, `session_officer_candidate`, `current_user_account`), with `observation_conflict` and `unusable_observation` for diagnostics. `ListAssistCandidateRepository.findCandidates(personalCode, date)` returns candidate hearings with diagnostics and per-container ingestion status. The results are evidence, not confirmed judicial assignments.
 
-    * org.owasp.dependencycheck
+To run it locally against Azurite, start `docker compose up -d postgres azurite`, seed Azurite, then run `LISTASSIST_BLOB_AUTH=emulator LISTASSIST_BLOB_ENDPOINT=http://127.0.0.1:10000/devstoreaccount1 LISTASSIST_INGEST_ENABLED=true ./gradlew bootRun --args='--listassist.blob.containers.hearings=hearings --listassist.blob.containers.sessions=sessions --listassist.blob.containers.session-officers=session-officers --listassist.blob.containers.users=users'`, naming the containers you seeded. `./gradlew performance -Dlistassist.performance.scale=1.0` is a manual test, not part of `check`. It generates a large synthetic data set in a disposable PostgreSQL and prints the candidate query timings and plans.
 
-        https://jeremylong.github.io/DependencyCheck/dependency-check-gradle/index.html
+### Azurite fixtures
 
-        Provides monitoring of the project's dependent libraries and creating a report
-        of known vulnerable components that are included in the build. To run it
-        execute `gradle dependencyCheck` command.
+`./gradlew integration` (also run by `./gradlew check`) needs Docker. It starts a fresh Azurite Blob emulator per test class through Testcontainers, pinned to `azurite:3.37.0` by digest, and generates synthetic Parquet for the four core containers, in a `baseline` scenario and a progressive `reassignment` scenario covering moves, cancellation and reinstatement, officer changes and a corrected overwrite. Column names and order come from `src/integrationTest/resources/listassist/parquet-schemas.json`. Files are written to `build/listassist-fixtures/<scenario>/` along with a `manifest.json` test oracle, which is never uploaded, and are seeded phase by phase using the public Azurite development key. The emulator client refuses any endpoint other than a plain HTTP emulator host with the `devstoreaccount1` path, and all fixture data is invented. For manual work, `docker compose up -d azurite` exposes the same image at `http://127.0.0.1:10000/devstoreaccount1`.
 
-  * jacoco
-
-    https://docs.gradle.org/current/userguide/jacoco_plugin.html
-
-    Provides code coverage metrics for Java code via integration with JaCoCo.
-    You can create the report by running the following command:
-
-    ```bash
-      ./gradlew jacocoTestReport
-    ```
-
-    The report will be created in build/reports subdirectory in your project directory.
-
-  * io.spring.dependency-management
-
-    https://github.com/spring-gradle-plugins/dependency-management-plugin
-
-    Provides Maven-like dependency management. Allows you to declare dependency management
-    using `dependency 'groupId:artifactId:version'`
-    or `dependency group:'group', name:'name', version:version'`.
-
-  * org.springframework.boot
-
-    http://projects.spring.io/spring-boot/
-
-    Reduces the amount of work needed to create a Spring application
-
-
-  * com.github.ben-manes.versions
-
-    https://github.com/ben-manes/gradle-versions-plugin
-
-    Provides a task to determine which dependencies have updates. Usage:
-
-    ```bash
-      ./gradlew dependencyUpdates -Drevision=release
-    ```
-
-## Setup
-
-Located in `./bin/init.sh`. Simply run and follow the explanation how to execute it.
-
-## Building and deploying the application
-
-### Building the application
-
-The project uses [Gradle](https://gradle.org) as a build tool. It already contains
-`./gradlew` wrapper script, so there's no need to install gradle.
-
-To build the project execute the following command:
-
-```bash
-  ./gradlew build
-```
-
-### Running the application
-
-Create the image of the application by executing the following command:
-
-```bash
-  ./gradlew assemble
-```
-
-Note: Docker Compose V2 is highly recommended for building and running the application.
-In the Compose V2 old `docker-compose` command is replaced with `docker compose`.
-
-Create docker image:
-
-```bash
-  docker compose build
-```
-
-Run the distribution (created in `build/install/spring-boot-template` directory)
-by executing the following command:
-
-```bash
-  docker compose up
-```
-
-This will start the API container exposing the application's port
-(set to `4550` in this template app).
-
-In order to test if the application is up, you can call its health endpoint:
-
-```bash
-  curl http://localhost:4550/health
-```
-
-You should get a response similar to this:
-
-```
-  {"status":"UP","diskSpace":{"status":"UP","total":249644974080,"free":137188298752,"threshold":10485760}}
-```
-
-### Alternative script to run application
-
-To skip all the setting up and building, just execute the following command:
-
-```bash
-./bin/run-in-docker.sh
-```
-
-For more information:
-
-```bash
-./bin/run-in-docker.sh -h
-```
-
-Script includes bare minimum environment variables necessary to start api instance. Whenever any variable is changed or any other script regarding docker image/container build, the suggested way to ensure all is cleaned up properly is by this command:
-
-```bash
-docker compose rm
-```
-
-It clears stopped containers correctly. Might consider removing clutter of images too, especially the ones fiddled with:
-
-```bash
-docker images
-
-docker image rm <image-id>
-```
-
-There is no need to remove postgres and java or similar core images.
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details
-
+The chart dependency comes from the HMCTS private ACR. CI needs registry access to run `helm dependency build charts/dtsse-services`.

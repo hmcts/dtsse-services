@@ -1,0 +1,116 @@
+{
+  "purpose": "Columns of the four core ListAssist containers used by the synthetic fixtures: those the application reads plus three generic unselected columns. No source records or values.",
+  "observedPhysicalFieldType": {
+    "type": "BYTE_ARRAY",
+    "repetition": "OPTIONAL",
+    "convertedType": "UTF8",
+    "logicalType": "STRING"
+  },
+  "datasets": [
+    {
+      "container": "hearings",
+      "scope": "core",
+      "viewToken": "vhmcts_Hearings",
+      "columnProfiles": [
+        [
+          "Case_No",
+          "CD_Jurisdiction",
+          "CD_Listing_Status",
+          "CD_Locality",
+          "CD_Location",
+          "extraction_date",
+          "Heard_Flag",
+          "Hearing_Channel",
+          "Hearing_Date",
+          "Hearing_DateTime",
+          "Hearing_Duration",
+          "Hearing_Start_Time_24h",
+          "Hearing_Type",
+          "ID_Booking",
+          "ID_Case",
+          "ID_Hearing",
+          "ID_JO_1",
+          "ID_JO_2",
+          "ID_JO_3",
+          "ID_Session",
+          "INACTIVE_DATE",
+          "Last_Modified_Date",
+          "Listing_Cancelled_Date",
+          "Listing_Cancelled_Flag",
+          "Listing_Status",
+          "Locality",
+          "Location",
+          "Session_Date",
+          "Unselected_1",
+          "Unselected_2",
+          "Unselected_3"
+        ]
+      ]
+    },
+    {
+      "container": "sessions",
+      "scope": "core",
+      "viewToken": "vhmcts_Sessions",
+      "columnProfiles": [
+        [
+          "cancelled_date",
+          "CD_Court",
+          "CD_Jurisdiction",
+          "CD_Room",
+          "CD_Session_Status",
+          "Court",
+          "end_time",
+          "extraction_date",
+          "Hearing_Channel",
+          "ID_Session",
+          "INACTIVE_DATE",
+          "Last_Modified_date",
+          "Room",
+          "Session_Date",
+          "Session_Status",
+          "start_time",
+          "Unselected_1",
+          "Unselected_2",
+          "Unselected_3"
+        ]
+      ]
+    },
+    {
+      "container": "session-officers",
+      "scope": "core",
+      "viewToken": "vhmcts_Sessions_JOfficer",
+      "columnProfiles": [
+        [
+          "extraction_date",
+          "ID_Booking",
+          "ID_JO",
+          "ID_Session",
+          "inactive_date",
+          "JO_Presiding",
+          "Last_Modified_Date",
+          "Unselected_1",
+          "Unselected_2",
+          "Unselected_3"
+        ]
+      ]
+    },
+    {
+      "container": "users",
+      "scope": "core",
+      "viewToken": "vhmcts_user",
+      "columnProfiles": [
+        [
+          "Active_From_Date",
+          "Active_to_Date",
+          "External_User_ID",
+          "extraction_date",
+          "ID_User",
+          "Last_Modified_Date",
+          "Unselected_1",
+          "Unselected_2",
+          "Unselected_3"
+        ]
+      ]
+    }
+  ]
+}

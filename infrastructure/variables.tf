@@ -14,3 +14,10 @@ variable "common_tags" {
   type = map(string)
 }
 
+variable "aks_subscription_id" {
+  type = string
+}
+
+variable "jenkins_AAD_objectId" {
+  type = string
+}
