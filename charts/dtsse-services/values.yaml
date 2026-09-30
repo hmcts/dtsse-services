@@ -1,5 +1,9 @@
 java:
   applicationPort: 4550
+  memoryRequests: 2Gi
+  memoryLimits: 3Gi
+  devmemoryRequests: 2Gi
+  devmemoryLimits: 3Gi
   image: hmctsprod.azurecr.io/dtsse/services:latest
   ingressHost: dtsse-services-{{ .Values.global.environment }}.service.core-compute-{{ .Values.global.environment }}.internal
   environment:
