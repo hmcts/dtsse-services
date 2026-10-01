@@ -50,7 +50,8 @@ class ParquetRowsTest {
         assertThat(rows.getFirst()[0]).hasSize(ParquetLimits.MAX_FIELD_BYTES);
         Path oversized = parquet("a".repeat(ParquetLimits.MAX_FIELD_BYTES + 1));
         assertThatThrownBy(() -> ParquetRows.read(oversized, List.of("value"), rows::add))
-            .isInstanceOf(SourceFileException.class);
+            .isInstanceOf(SourceFileException.class)
+            .hasMessage("Parquet input exceeds the field_bytes limit");
         assertThat(rows).hasSize(1);
     }
 
