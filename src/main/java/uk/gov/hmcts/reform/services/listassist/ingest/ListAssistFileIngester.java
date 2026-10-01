@@ -137,8 +137,10 @@ class ListAssistFileIngester {
 
     private void fail(String container, ListedVersion version, String errorCode, Exception e) {
         // Only the exception type is logged: messages from decoders or the database can echo source values.
-        log.error("ListAssist file failed container={} blob={} errorCode={} exception={}", container,
-            version.name().blobName(), errorCode, e == null ? null : e.getClass().getName());
+        // SourceFileException messages are written here and never contain row values.
+        log.error("ListAssist file failed container={} blob={} errorCode={} exception={} detail={}", container,
+            version.name().blobName(), errorCode, e == null ? null : e.getClass().getName(),
+            e instanceof SourceFileException ? e.getMessage() : null);
         ledger.markFailed(container, version, errorCode);
     }
 

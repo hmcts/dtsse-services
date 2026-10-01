@@ -108,7 +108,8 @@ public class ListAssistIngestion {
             if (name.isPresent()) {
                 listed.add(new ListedVersion(name.get(), item.getProperties().getETag(),
                     item.getProperties().getContentLength()));
-            } else {
+            } else if (item.getName().endsWith("-data.parquet")) {
+                // Schema files, folder markers and metadata sit alongside the extracts and are skipped silently.
                 log.warn("Ignoring ListAssist Blob that is not a recognised extract container={} blob={}",
                     dataset.container().key(), item.getName());
             }

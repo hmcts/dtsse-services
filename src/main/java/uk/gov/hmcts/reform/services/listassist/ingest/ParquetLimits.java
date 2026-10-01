@@ -12,9 +12,9 @@ final class ParquetLimits implements CompressionCodecFactory {
 
     static final int MAX_FOOTER_BYTES = 8 * 1024 * 1024;
     static final int MAX_PAGE_BYTES = 16 * 1024 * 1024;
-    static final int MAX_ROW_GROUP_BYTES = 128 * 1024 * 1024;
+    static final int MAX_ROW_GROUP_BYTES = 256 * 1024 * 1024;
     static final int MAX_FIELD_BYTES = 16 * 1024;
-    static final long MAX_ROWS = 5_000_000;
+    static final long MAX_ROWS = 10_000_000;
 
     private final CompressionCodecFactory delegate;
     private long decodedBytes;
@@ -27,16 +27,19 @@ final class ParquetLimits implements CompressionCodecFactory {
         decodedBytes = 0;
     }
 
-    static void requireWithin(long value, long maximum) {
+    /**
+     * The limit name is logged with the failure, so it must never be built from file content.
+     */
+    static void requireWithin(long value, long maximum, String limit) {
         if (value < 0 || value > maximum) {
-            throw new SourceFileException("resource_limit", "Parquet input exceeds a resource limit");
+            throw new SourceFileException("resource_limit", "Parquet input exceeds the " + limit + " limit");
         }
     }
 
     private void checkPage(long compressedSize, int uncompressedSize) {
-        requireWithin(compressedSize, MAX_PAGE_BYTES);
-        requireWithin(uncompressedSize, MAX_PAGE_BYTES);
-        requireWithin(uncompressedSize, MAX_ROW_GROUP_BYTES - decodedBytes);
+        requireWithin(compressedSize, MAX_PAGE_BYTES, "page_bytes");
+        requireWithin(uncompressedSize, MAX_PAGE_BYTES, "page_bytes");
+        requireWithin(uncompressedSize, MAX_ROW_GROUP_BYTES - decodedBytes, "row_group_bytes");
         decodedBytes += uncompressedSize;
     }
 

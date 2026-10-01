@@ -52,7 +52,7 @@ final class ParquetRows {
             .withAllocator(new HeapByteBufferAllocator() {
                 @Override
                 public ByteBuffer allocate(int size) {
-                    requireWithin(size, ParquetLimits.MAX_PAGE_BYTES);
+                    requireWithin(size, ParquetLimits.MAX_PAGE_BYTES, "page_bytes");
                     return super.allocate(size);
                 }
             }).build();
@@ -63,15 +63,16 @@ final class ParquetRows {
             reader.setRequestedSchema(projection);
             long declaredRows = 0;
             for (var block : reader.getFooter().getBlocks()) {
-                requireWithin(block.getRowCount(), ParquetLimits.MAX_ROWS - declaredRows);
+                requireWithin(block.getRowCount(), ParquetLimits.MAX_ROWS - declaredRows, "rows");
                 declaredRows += block.getRowCount();
                 long compressed = 0;
                 long uncompressed = 0;
                 for (var chunk : block.getColumns()) {
                     if (columns.contains(chunk.getPath().toDotString())) {
-                        requireWithin(chunk.getTotalSize(), ParquetLimits.MAX_ROW_GROUP_BYTES - compressed);
+                        requireWithin(chunk.getTotalSize(), ParquetLimits.MAX_ROW_GROUP_BYTES - compressed,
+                            "row_group_bytes");
                         requireWithin(chunk.getTotalUncompressedSize(),
-                            ParquetLimits.MAX_ROW_GROUP_BYTES - uncompressed);
+                            ParquetLimits.MAX_ROW_GROUP_BYTES - uncompressed, "row_group_bytes");
                         compressed += chunk.getTotalSize();
                         uncompressed += chunk.getTotalUncompressedSize();
                     }
@@ -87,14 +88,14 @@ final class ParquetRows {
                 try (pages) {
                     RecordReader<Group> records = new ColumnIOFactory().getColumnIO(projection, fileSchema)
                         .getRecordReader(pages, new GroupRecordConverter(projection));
-                    requireWithin(pages.getRowCount(), ParquetLimits.MAX_ROWS - rows);
+                    requireWithin(pages.getRowCount(), ParquetLimits.MAX_ROWS - rows, "rows");
                     for (long i = 0; i < pages.getRowCount(); i++) {
                         Group group = records.read();
                         String[] row = new String[columns.size()];
                         for (int field = 0; field < row.length; field++) {
                             if (group.getFieldRepetitionCount(field) != 0) {
                                 var binary = group.getBinary(field, 0);
-                                requireWithin(binary.length(), ParquetLimits.MAX_FIELD_BYTES);
+                                requireWithin(binary.length(), ParquetLimits.MAX_FIELD_BYTES, "field_bytes");
                                 row[field] = binary.toStringUsingUTF8();
                             }
                         }
@@ -126,7 +127,7 @@ final class ParquetRows {
             if (tail.getInt() != 0x31524150) {
                 throw new IOException("Expected an unencrypted Parquet file");
             }
-            requireWithin(size, Math.min(ParquetLimits.MAX_FOOTER_BYTES, channel.size() - 12));
+            requireWithin(size, Math.min(ParquetLimits.MAX_FOOTER_BYTES, channel.size() - 12), "footer_bytes");
         }
     }
 

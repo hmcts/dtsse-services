@@ -41,13 +41,14 @@ class ParquetLimitsTest {
         when(factory.getDecompressor(any())).thenReturn(decoder);
         ParquetLimits limits = new ParquetLimits(factory);
         var bounded = limits.getDecompressor(CompressionCodecName.SNAPPY);
-        for (int i = 0; i < 8; i++) {
+        int pages = ParquetLimits.MAX_ROW_GROUP_BYTES / ParquetLimits.MAX_PAGE_BYTES;
+        for (int i = 0; i < pages; i++) {
             bounded.decompress(BytesInput.empty(), ParquetLimits.MAX_PAGE_BYTES);
         }
         assertThatThrownBy(() -> bounded.decompress(BytesInput.empty(), 1))
             .isInstanceOf(SourceFileException.class);
         limits.nextRowGroup();
         bounded.decompress(BytesInput.empty(), ParquetLimits.MAX_PAGE_BYTES);
-        verify(decoder, times(9)).decompress(BytesInput.empty(), ParquetLimits.MAX_PAGE_BYTES);
+        verify(decoder, times(pages + 1)).decompress(BytesInput.empty(), ParquetLimits.MAX_PAGE_BYTES);
     }
 }
