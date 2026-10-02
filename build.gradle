@@ -152,7 +152,7 @@ repositories {
 
 ext {
   log4JVersion = "2.26.1"
-  logbackVersion = "1.5.38"
+  logbackVersion = "1.6.5"
 }
 
 // Newer patch releases than Spring Boot 4.1.1 manages, for fixed CVEs. Jackson 2 only arrives through azure-core.
