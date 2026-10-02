@@ -43,6 +43,8 @@ public class ListAssistIngestion {
      * Containers progress independently: a failure in one is logged and the others continue.
      */
     public void ingestAll(HeldLock lock) {
+        long started = System.nanoTime();
+        log.info("ListAssist ingestion started");
         for (ListAssistDataset dataset : ListAssistDataset.values()) {
             try {
                 ingest(dataset, lock);
@@ -54,6 +56,7 @@ public class ListAssistIngestion {
                     e instanceof BlobStorageException storage ? storage.getErrorCode() : null);
             }
         }
+        log.info("ListAssist ingestion finished durationMs={}", (System.nanoTime() - started) / 1_000_000);
     }
 
     private void ingest(ListAssistDataset dataset, HeldLock lock) {
