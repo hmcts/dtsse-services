@@ -41,7 +41,7 @@ listassist:
     auth: ${LISTASSIST_BLOB_AUTH:entra}
   ingest:
     enabled: ${LISTASSIST_INGEST_ENABLED:false}
-    cron: ${LISTASSIST_INGEST_CRON:0 */15 * * * *}
+    cron: ${LISTASSIST_INGEST_CRON:0 0 3/6 * * *}
     zone: ${LISTASSIST_INGEST_ZONE:Europe/London}
     # Larger extracts fail as file_too_large before download, bounding temporary disk use.
     max-file-bytes: ${LISTASSIST_INGEST_MAX_FILE_BYTES:1073741824}
