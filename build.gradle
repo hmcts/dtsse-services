@@ -169,8 +169,8 @@ dependencies {
   implementation group: 'org.springframework.boot', name: 'spring-boot-starter-jackson'
 
   implementation group: 'com.github.hmcts.java-logging', name: 'logging', version: '8.0.0'
-  implementation group: 'com.azure', name: 'azure-identity', version: '1.18.6'
-  implementation group: 'com.azure', name: 'azure-storage-blob', version: '12.35.1'
+  implementation group: 'com.azure', name: 'azure-identity', version: '1.18.7'
+  implementation group: 'com.azure', name: 'azure-storage-blob', version: '12.35.2'
   implementation group: 'org.flywaydb', name: 'flyway-database-postgresql'
   implementation group: 'org.apache.parquet', name: 'parquet-hadoop', version: '1.18.1'
   implementation group: 'org.apache.hadoop', name: 'hadoop-client-api', version: '3.5.0'
