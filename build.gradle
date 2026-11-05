@@ -185,8 +185,8 @@ dependencies {
 
   testImplementation group: 'org.springframework.boot', name: 'spring-boot-starter-test'
 
-  smokeTestImplementation group: 'io.rest-assured', name: 'rest-assured', version: '6.2.0'
-  functionalTestImplementation group: 'io.rest-assured', name: 'rest-assured', version: '6.2.0'
+  smokeTestImplementation group: 'io.rest-assured', name: 'rest-assured', version: '6.3.0'
+  functionalTestImplementation group: 'io.rest-assured', name: 'rest-assured', version: '6.3.0'
 
   integrationTestImplementation group: 'org.testcontainers', name: 'testcontainers'
   integrationTestImplementation group: 'org.testcontainers', name: 'testcontainers-junit-jupiter'
